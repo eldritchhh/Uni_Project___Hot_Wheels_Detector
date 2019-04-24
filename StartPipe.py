@@ -238,7 +238,7 @@ if not os.path.exists("res"):
     os.makedirs("res")
 
 alphabeth = ['NOCAR', 'A','B','C','D','E','F','G','H','I','L','M','N','O','P','Q','R','S','T','U','V','Z']
-bot_id = '875125863:AAHfSvyBHwGOiCZ31_etH_pGFyD_8hQOHrc'
+bot_id = '*******************************'
 classif_input = 192
 
 updater = Updater(bot_id)
