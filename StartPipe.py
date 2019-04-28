@@ -14,10 +14,15 @@ from keras_frcnn import roi_helpers
 import keras_frcnn.resnet as nn
 import keras_frcnn.utils as utils
 
-def im_processing():
-	return
+def im_processing(img):
+	#return utils.gamma(img)
+	#return utils.edge_sharpen(img)
+	return img
 
 def detection(img, local_filename):
+
+	detect_res = []
+
 	X, ratio = utils.format_img(img, C)
 	if K.image_dim_ordering() == 'tf':
 		X = np.transpose(X, (0, 2, 3, 1))
@@ -79,83 +84,84 @@ def detection(img, local_filename):
 
 	all_dets = []
 	for key in bboxes:
+
 		bbox = np.array(bboxes[key])
 
 		new_boxes, new_probs = roi_helpers.non_max_suppression_fast(bbox, np.array(probs[key]), overlap_thresh=0.5)
-		for jk in range(new_boxes.shape[0]):
-			(x1, y1, x2, y2) = new_boxes[jk,:]
-			(real_x1, real_y1, real_x2, real_y2) = utils.get_real_coordinates(ratio, x1, y1, x2, y2)
-			
-			cropped = utils.square_crop(img, real_x1, real_y1, real_x2, real_y2)
-			#print("Saving cropped images")
-			cv2.imwrite('res/cropped' + str(jk) + '.png', cropped)
 		
 		for jk in range(new_boxes.shape[0]):
-			(x1, y1, x2, y2) = new_boxes[jk,:]
-			(real_x1, real_y1, real_x2, real_y2) = utils.get_real_coordinates(ratio, x1, y1, x2, y2)
+			if(new_probs[jk] > 0.95):
+				(x1, y1, x2, y2) = new_boxes[jk,:]
+				(real_x1, real_y1, real_x2, real_y2) = utils.get_real_coordinates(ratio, x1, y1, x2, y2)
+				
+				cropped = utils.square_crop(img, real_x1, real_y1, real_x2, real_y2)
+				#print("Saving cropped images")
+				cv2.imwrite('res/cropped' + str(jk) + '.png', cropped)
 
-			cv2.rectangle(img,(real_x1, real_y1), (real_x2, real_y2), (int(class_to_color[key][0]), 
-						int(class_to_color[key][1]), int(class_to_color[key][2])),2)
+				detect_res.append([real_x1, real_y1, real_x2, real_y2])
+		#'''
+		for jk in range(new_boxes.shape[0]):
+			if(new_probs[jk] > 0.95):
+			
+				(x1, y1, x2, y2) = new_boxes[jk,:]
+				(real_x1, real_y1, real_x2, real_y2) = utils.get_real_coordinates(ratio, x1, y1, x2, y2)
 
-			textLabel = '{}: {}'.format(key, int(100 * new_probs[jk]))
-			all_dets.append((key,100*new_probs[jk]))
+				cv2.rectangle(img,(real_x1, real_y1), (real_x2, real_y2), (int(class_to_color[key][0]), 
+							int(class_to_color[key][1]), int(class_to_color[key][2])),2)
 
-			(retval,baseLine) = cv2.getTextSize(textLabel, cv2.FONT_HERSHEY_COMPLEX,1,1)
-			textOrg = (real_x1, real_y1-0)
+				textLabel = '{}: {}'.format(key, int(100 * new_probs[jk]))
+				all_dets.append((key,100*new_probs[jk]))
 
-			cv2.rectangle(img, (textOrg[0] - 5, textOrg[1]+baseLine - 5), (textOrg[0]+retval[0] + 5, textOrg[1]-retval[1] - 5), (0, 0, 0), 2)
-			cv2.rectangle(img, (textOrg[0] - 5,textOrg[1]+baseLine - 5), (textOrg[0]+retval[0] + 5, textOrg[1]-retval[1] - 5), (255, 255, 255), -1)
-			cv2.putText(img, textLabel, textOrg, cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 0), 1)
-	
+				(retval,baseLine) = cv2.getTextSize(textLabel, cv2.FONT_HERSHEY_COMPLEX,1,1)
+				textOrg = (real_x1, real_y1-0)
+
+				cv2.rectangle(img, (textOrg[0] - 5, textOrg[1]+baseLine - 5), (textOrg[0]+retval[0] + 5, textOrg[1]-retval[1] - 5), (0, 0, 0), 2)
+				cv2.rectangle(img, (textOrg[0] - 5,textOrg[1]+baseLine - 5), (textOrg[0]+retval[0] + 5, textOrg[1]-retval[1] - 5), (255, 255, 255), -1)
+				cv2.putText(img, textLabel, textOrg, cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 0), 1)
+		#'''
+
 	cv2.imwrite('res/' + local_filename[-11:][0:7] + '.png', img)
-	
+	return detect_res
+
 def classification(bot, chat_id, local_filename):
+
+	class_res = []
+
 	for file in glob.glob('res/cropped*.png'):
 		print(file)
-		try:
-			temp = image.load_img(file, target_size = (classif_input,classif_input))
-			temp = image.img_to_array(temp)
-			temp = np.expand_dims(temp, axis = 0)
-			temp = temp / 255.0
-			
-			prob = str(round(np.max(classifier.predict(temp)[0]),2))
-			car = str(alphabeth[np.argmax(classifier.predict(temp)[0])])
+	
+		temp = image.load_img(file, target_size = (classif_input,classif_input))
+		temp = image.img_to_array(temp)
+		temp = np.expand_dims(temp, axis = 0)
+		temp = temp / 255.0
+		
+		prob = round(np.max(classifier.predict(temp)[0]),2)
+		car = str(alphabeth[np.argmax(classifier.predict(temp)[0])])
 
-			temp = image.array_to_img(temp[0])
-			utils.save_cars(temp, local_filename, car, prob, '4classification')
-			
-			bot.sendMessage(chat_id, 'Car: ' + car + ' - Prob: ' + prob)
-			print('Car: ' + car + ' - Prob: ' + prob)
+		temp = image.array_to_img(temp[0])
+		utils.save_cars(temp, local_filename, car, prob, '4classification')
+		
+		bot.sendMessage(chat_id, 'Car: ' + car + ' - Prob: ' + str(prob))
+		print('Car: ' + car + ' - Prob: ' + str(prob))
 
-		except:
-			pass
+		class_res.append(car)
+	
+	return class_res
 
 def imageHandler(bot, message, chat_id, local_filename):
 	print('Image Name: ', local_filename)
 	bot.sendMessage(chat_id, "Hi, please wait until the output is ready")
-
-	for file in glob.glob('res/cropped*.png'):
-		os.remove(file)
 	
 	img = cv2.imread(local_filename)
-	
-	# RUN PROCESSING
-	###############################################################
-	print('---------- PROCESSING')
-	start = time.time()
-
-	im_processing()
-
-	end = time.time()
-	print("Total time for processing:", end - start)
 	
 	# RUN DETECTION
 	###############################################################
 	print('---------- DETECTION')
 	start = time.time()
     
-	detection(img, local_filename)
-	
+	detect_res = detection(img, local_filename)
+	print(detect_res)
+
 	end = time.time()
 	print("Total time to detect image:", end - start)
 
@@ -164,11 +170,16 @@ def imageHandler(bot, message, chat_id, local_filename):
 	print('---------- CLASSIFICATION')
 	start = time.time()
 	
-	classification(bot, chat_id, local_filename)
-	
+	class_res = classification(bot, chat_id, local_filename)
+	print(class_res)
+
 	end = time.time()
 	print("Total time to classify images:", end - start)
-	
+
+
+	for file in glob.glob('res/cropped*.png'):
+		os.remove(file)
+
 	print("---------- IMAGE COMPLETED ----------")
 
 ##########################   MAIN   ###############################
@@ -230,16 +241,20 @@ model_rpn.compile(optimizer='sgd', loss='mse')
 model_classifier.compile(optimizer='sgd', loss='mse')
 
 # LOAD PREDICTION MODEL
-classifier_model_path = 'models/NoCarAdded_MobileNetV2.h5'
+classifier_model_path = 'models/MobileNetV2_192_NoCar.h5'
 classifier = load_model(classifier_model_path)
 
 # SETUP BOT AND FOLDERS
+alphabeth = ['A','B','C','D','E','F','G','H','I','L','M','N','O','P','Q','R','S','T','U','V','Z']
+
 if not os.path.exists("res"):
     os.makedirs("res")
 
-alphabeth = ['NOCAR', 'A','B','C','D','E','F','G','H','I','L','M','N','O','P','Q','R','S','T','U','V','Z']
-bot_id = '*******************************'
 classif_input = 192
+marker_true = cv2.imread("V_tick.png", -1)
+marker_false = cv2.imread("X_tick.png", -1)
+
+bot_id = '886636240:AAH96GeD-oy4wzJbu1AZMXYC-Xo-IO0dgYo'
 
 updater = Updater(bot_id)
 updater.setPhotoHandler(imageHandler)

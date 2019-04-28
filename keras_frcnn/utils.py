@@ -2,6 +2,8 @@ from __future__ import division
 import cv2
 import numpy as np
 import os
+import math
+from scipy import ndimage
 
 def format_img_size(img, C):
 	""" formats the image size based on config """
@@ -46,22 +48,30 @@ def get_real_coordinates(ratio, x1, y1, x2, y2):
 
 	return (real_x1, real_y1, real_x2 ,real_y2)
 
-
+###########################################################################
 	
 def square_crop(img, real_x1, real_y1, real_x2, real_y2):
-	#
-	#  NB. AL MOMENTO NON CONTROLLA CHE I VALORI ESCANO FUORI DALL'IMMAGINE
-	#
 	offset = int(round(((real_x2 - real_x1) - (real_y2 - real_y1))/2))
+	l = img.shape[0]
 
 	if (offset > 0):
 		offset = abs(offset)
-		return img[ real_y1 - offset : real_y2 + offset,
+		new_y1 = real_y1 - offset if real_y1 - offset > 0 else 0
+		new_y2 = real_y2 + offset if real_y2 + offset < l else l-1
+		real_x1 = 0 if real_x1 < 0 else real_x1
+		real_x2 = l-1 if real_x2 > l else real_x2
+
+		return img[ new_y1 : new_y2,
 					real_x1 : real_x2]
 	else:
 		offset = abs(offset)
+		new_x1 = real_x1 - offset if real_x1 - offset > 0 else 0
+		new_x2 = real_x2 + offset if real_x2 + offset < l else l-1
+		real_y1 = 0 if real_y1 < 0 else real_y1
+		real_y2 = l-1 if real_y2 > l else real_y2
+
 		return img[ real_y1 : real_y2,
-					real_x1 - offset : real_x2 + offset]
+					new_x1 : new_x2]
 
 def save_cars(img, filename, car, prob, mode):
 	if(mode == 'res'):
@@ -71,4 +81,50 @@ def save_cars(img, filename, car, prob, mode):
 			os.makedirs('res/car_' + car)
 		dir = 'res/car_' + car
 
-	img.save(dir + '/' + filename[-11:][0:7] + '_car_' + car + '_prob_' + prob + '.png')
+	img.save(dir + '/' + filename[-11:][0:7] + '_car_' + car + '_prob_' + str(prob) + '.png')
+
+def insert_img(img, marker, x1, y1, x2, y2):
+
+	l = img.shape[0]
+	x1 = 0 if x1 < 0 else x1
+	y1 = 0 if y1 < 0 else y1
+	x2 = l-1 if x2 > l else x2
+	y2 = l-1 if y2 > l else y2
+
+	offset = int(round(((x2 - x1) - (y2 - y1))/2))
+	
+	if (offset > 0):
+		offset = abs(offset)
+		new_x1 = x1 + offset
+		new_x2 = x2 - offset
+		marker = cv2.resize(marker, (new_x2 - new_x1, y2 - y1))
+		alpha_marker = marker[:, :, 3] / 255.0
+		alpha_img = 1.0 - alpha_marker
+
+		for c in range(0, 3):
+			img[y1:y2, new_x1:new_x2, c] = (alpha_marker * marker[:, :, c] + 
+				alpha_img * img[y1:y2, new_x1:new_x2, c])
+	else:
+		offset = abs(offset)
+		new_y1 = y1 + offset
+		new_y2 = y2 - offset
+		marker = cv2.resize(marker, (x2 - x1, new_y2 - new_y1))
+		alpha_marker = marker[:, :, 3] / 255.0
+		alpha_img = 1.0 - alpha_marker
+
+		for c in range(0, 3):
+			img[new_y1:new_y2, x1:x2, c] = (alpha_marker * marker[:, :, c] + 
+				alpha_img * img[new_y1:new_y2, x1:x2, c])
+
+	return img
+
+def gamma(img):
+
+	ycbcr = cv2.cvtColor(img, cv2.COLOR_BGR2YCR_CB)
+	y = ycbcr[:,:,0] / 255.0
+	mask = ndimage.gaussian_filter(1 - y, sigma=5, mode='nearest')
+	mask = 2 ** ((0.5 - mask) / 0.5)
+	y = y ** mask
+	ycbcr[:,:,0] = y * 255.0
+
+	return cv2.cvtColor(ycbcr, cv2.COLOR_YCrCb2BGR)
