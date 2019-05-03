@@ -33,7 +33,27 @@ keyboard = [[InlineKeyboardButton(text='VERO', callback_data='V'),
 ###############   GLOBAL VARIABLES   ############### 
 
 alphabeth = ['A','B','C','D','E','F','G','H','I','L','M','N','O','P','Q','R','S','T','U','V','Z']
-descriptions = ['A','B','C','D','E','F','G','H','I','L','M','N','O','P','Q','R','S','T','U','V','Z']
+descriptions = ["E' la Ferrari completamente nera con il posteriore e l'anteriore tondeggiante? (Car A)",
+"E' la Hot Wheels viola e nera senza tettuccio? (Car B)",
+"E' la Ferrari completamente nera con il posteriore e l'anteriore squadrato? (Car C)",
+"E' la Hot Wheels bianca con le strisce verdi e arancioni sul cofano e il tetto? (Car D)",
+"E' la Ferrari completamente bianca? (Car E)",
+"E' la Toyota da rally bianca e rossa? (Car F)",
+"E' la Hot Wheels grigia con il numero 4 in rosso sul cofano? (Car G)",
+"E' la Hot Wheels completamente grigia con gli interni rossi? (Car H)",
+"E' la Hot Wheels grigia con le strisce blu e rosse sul cofano senza tettuccio? (Car I)",
+"E' la Hot Wheels gialla con le strisce nere e rosse? (Car L)",
+"E' la Hot Wheels gialla con la bandiera italiana sul cofano e il tettuccio? (Car M)",
+"E' la Hot Wheels completamente gialla e tondeggiante? (Car N)",
+"E' la Hot Wheels verde chiaro con le fiamme rosse sul cofano e il 6 sul posteriore? (Car O)",
+"E' la Hot Wheels verde scuro con le aerografie rosse sul cofano e sul tetto? (Car P)",
+"E' la Hot Wheels verde scuro da corsa? (Car Q)",
+"E' la Hot Wheels blu e bianca con il motore a vista? (Car R)",
+"E' la Hot Wheels blu con la scritta sul lato e tondeggiante? (Car S)",
+"E' la Hot Wheels blu con la scritta sul lato e squadrata? (Car T)",
+"E' la Hot Wheels completamente rossa con il cofano lungo? (Car U)",
+"E' la Hot Wheels rossa con il cofano e il tettuccio nero? (Car V)",
+"E' la Hot Wheels rossa con le aerografie in nero e il 15 sul cofano? (Car Z)"]
 
 game_img_idx = 0
 temp_crop_idx = 0
@@ -347,7 +367,7 @@ def callback_method(update, context):
 
 ########################################   BOT   ########################################
 
-updater = Updater(token='886636240:AAH96GeD-oy4wzJbu1AZMXYC-Xo-IO0dgYo', use_context=True)
+updater = Updater(token='*********', use_context=True)
 
 dispatcher = updater.dispatcher
 dispatcher.add_handler(MessageHandler(Filters.photo, image_handler))
